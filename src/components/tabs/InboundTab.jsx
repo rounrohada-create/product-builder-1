@@ -24,7 +24,8 @@ import {
   UploadOutlined,
   ScanOutlined,
   PlusOutlined,
-  MinusOutlined
+  MinusOutlined,
+  ShoppingOutlined
 } from '@ant-design/icons';
 import Webcam from 'react-webcam';
 import { triggerFeedback } from '../../utils/feedback';
@@ -142,18 +143,6 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = '
       handleImageAnalysis(file);
     } else {
       message.error('이미지 파일만 업로드 가능합니다');
-      triggerFeedback('error');
-    }
-  };
-
-  // 정보 확정
-  const handleConfirm = async () => {
-    try {
-      const values = await form.validateFields();
-      setAiResult({ ...aiResult, ...values });
-      setStep(3);
-      triggerFeedback('success');
-    } catch (error) {
       triggerFeedback('error');
     }
   };
@@ -421,17 +410,6 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = '
               />
             </Form.Item>
 
-            {aiResult.sizes && aiResult.sizes.length > 0 && (
-              <div className="sizes-detected">
-                <p className="sizes-label">🎯 AI가 추출한 사이즈 ({aiResult.sizes.length}개)</p>
-                <div className="size-tags">
-                  {aiResult.sizes.map(size => (
-                    <span key={size} className="size-tag">{size}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <Form.Item label="바코드" name="barcode">
               <Input 
                 size="large" 
@@ -441,51 +419,21 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = '
             </Form.Item>
           </Form>
 
-          <Space direction="vertical" style={{ width: '100%' }} size="middle">
-            <Button
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              size="large"
-              block
-              onClick={handleConfirm}
-            >
-              정보 확정
-            </Button>
-            <Button
-              size="large"
-              block
-              onClick={handleRescan}
-            >
-              다시 스캔
-            </Button>
-          </Space>
-        </Card>
-      )}
-
-      {/* Step 3: 동적 수량 입력 */}
-      {step === 3 && aiResult && (
-        <Card className="quantity-card">
-          <div className="product-info">
-            <h3>{aiResult.itemName}</h3>
-            <p className="item-code">품번: {aiResult.itemCode}</p>
-            <Badge 
-              count={modeText}
-              style={{ 
-                backgroundColor: modeColor,
-                fontSize: 14,
-                fontWeight: 600,
-                marginTop: 8
-              }}
-            />
-          </div>
-
-          <Divider />
-
+          {/* 🔥 사이즈별 수량 입력 (Step 2에서 바로 표시) */}
           {aiResult.sizes && aiResult.sizes.length > 0 ? (
-            // 사이즈별 수량 입력 (동적 생성)
-            <div className="size-quantity-section">
-              <h4>사이즈 / 수량</h4>
-              <p className="quantity-hint">엄지로 톡톡 눌러서 수량을 맞춰주세요</p>
+            <div className="size-quantity-section" style={{ marginTop: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <h4 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+                  <ShoppingOutlined style={{ marginRight: 8, color: modeColor }} />
+                  사이즈별 수량
+                </h4>
+                <span style={{ fontSize: 14, color: '#8c8c8c' }}>
+                  ({aiResult.sizes.length}개 사이즈)
+                </span>
+              </div>
+              <p className="quantity-hint" style={{ marginBottom: 16, fontSize: 14, color: '#8c8c8c' }}>
+                👆 엄지로 톡톡 눌러서 수량을 맞춰주세요
+              </p>
               
               <div className="dynamic-size-list">
                 {aiResult.sizes.map(size => (
@@ -523,17 +471,20 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = '
                 ))}
               </div>
               
-              <div className="total-quantity">
-                <span>총 수량:</span>
-                <span className="total-number" style={{ color: modeColor }}>
+              <div className="total-quantity" style={{ marginTop: 16 }}>
+                <span style={{ fontSize: 16, fontWeight: 500 }}>총 수량:</span>
+                <span className="total-number" style={{ color: modeColor, fontSize: 24, fontWeight: 700, marginLeft: 12 }}>
                   {Object.values(sizeQuantities).reduce((sum, qty) => sum + qty, 0)}개
                 </span>
               </div>
             </div>
           ) : (
-            // 단순 수량 입력
-            <div className="simple-quantity-section">
-              <h4>동록 수량</h4>
+            // 사이즈 없는 상품: 단순 수량 입력
+            <div className="simple-quantity-section" style={{ marginTop: 24 }}>
+              <h4 style={{ marginBottom: 16, fontSize: 18, fontWeight: 600 }}>
+                <ShoppingOutlined style={{ marginRight: 8, color: modeColor }} />
+                등록 수량
+              </h4>
               <div className="simple-quantity-controls">
                 <Button
                   type="default"
@@ -545,7 +496,7 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = '
                   className="simple-qty-btn"
                   style={{ width: 64, height: 64, fontSize: 24 }}
                 />
-                <div className="simple-qty-display" style={{ color: modeColor }}>
+                <div className="simple-qty-display" style={{ color: modeColor, fontSize: 32, fontWeight: 700 }}>
                   {simpleQuantity}
                 </div>
                 <Button
@@ -555,37 +506,35 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = '
                   size="large"
                   onClick={handleSimpleIncrease}
                   className="simple-qty-btn"
-                  style={{ 
-                    width: 64, 
-                    height: 64, 
-                    fontSize: 24,
-                    backgroundColor: modeColor,
-                    borderColor: modeColor
-                  }}
+                  style={{ width: 64, height: 64, fontSize: 24, backgroundColor: modeColor, borderColor: modeColor }}
                 />
               </div>
             </div>
           )}
 
-          <Divider />
-
-          <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <Space direction="vertical" style={{ width: '100%', marginTop: 24 }} size="middle">
             <Button
               type="primary"
               size="large"
               block
               onClick={handleSubmit}
-              className="submit-btn"
-              style={{ backgroundColor: modeColor, borderColor: modeColor }}
+              style={{ 
+                height: 56,
+                fontSize: 18,
+                fontWeight: 600,
+                background: `linear-gradient(135deg, ${modeColor} 0%, ${modeColor}dd 100%)`,
+                borderColor: modeColor
+              }}
             >
-              소장
+              {modeText} 완료
             </Button>
             <Button
               size="large"
               block
               onClick={handleRescan}
+              style={{ height: 48 }}
             >
-              커리하
+              다시 스캔
             </Button>
           </Space>
         </Card>
