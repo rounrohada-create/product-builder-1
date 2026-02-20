@@ -201,6 +201,9 @@ export const analyzeImageWithGemini = async (imageFile) => {
       return getMockAnalysisResult();
     }
 
+    console.log('✅ Gemini API 키 확인됨:', GEMINI_API_KEY.substring(0, 10) + '...');
+    console.log('📡 Gemini API 호출 시작...');
+
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
@@ -210,14 +213,23 @@ export const analyzeImageWithGemini = async (imageFile) => {
     });
 
     if (!response.ok) {
-      throw new Error(`Gemini API 오류: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ Gemini API HTTP 오류:', response.status, errorText);
+      throw new Error(`Gemini API 오류: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    console.log('📊 Gemini API 응답:', data);
+    console.log('📊 Gemini API 원본 응답:', JSON.stringify(data, null, 2));
 
     // 응답에서 JSON 추출
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      console.error('❌ 응답 형식 오류:', data);
+      throw new Error('Gemini API 응답 형식이 올바르지 않습니다.');
+    }
+
     const textResponse = data.candidates[0].content.parts[0].text;
+    console.log('📝 AI 텍스트 응답:', textResponse);
+    
     const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
     
     if (jsonMatch) {
@@ -225,13 +237,15 @@ export const analyzeImageWithGemini = async (imageFile) => {
       console.log('✅ AI 분석 완료:', parsedResult);
       return parsedResult;
     } else {
+      console.error('❌ JSON 추출 실패. 텍스트:', textResponse);
       throw new Error('JSON 형식의 응답을 찾을 수 없습니다.');
     }
 
   } catch (error) {
-    console.error('❌ Gemini API 오류:', error);
-    // 오류 발생 시 Mock 데이터 반환
-    return getMockAnalysisResult();
+    console.error('❌ Gemini API 오류 상세:', error);
+    console.error('❌ 오류 스택:', error.stack);
+    // 오류 발생 시에도 에러를 다시 던져서 사용자가 알 수 있도록 함
+    throw error;
   }
 };
 

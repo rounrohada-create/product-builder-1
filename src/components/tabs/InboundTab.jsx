@@ -114,8 +114,19 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = '
       });
       triggerFeedback('success');
     } catch (error) {
-      console.error('분석 오류:', error);
-      message.error({ content: '❌ 분석 실패. 다시 시도해주세요.', key: 'analyzing' });
+      console.error('❌ 분석 오류:', error);
+      
+      // 실제 Gemini API 오류 메시지 표시
+      let errorMessage = '분석 중 오류가 발생했습니다.';
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      message.error({ 
+        content: `❌ ${errorMessage}`, 
+        key: 'analyzing',
+        duration: 5
+      });
       triggerFeedback('error');
       setCapturedImage(null);
     } finally {
