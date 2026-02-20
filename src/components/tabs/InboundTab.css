@@ -1,4 +1,4 @@
-/* 입고 탭 스타일 */
+/* 입고 탭 스타일 - 동적 사이즈 버튼 방식 */
 
 .inbound-tab {
   max-width: 100%;
@@ -131,14 +131,42 @@
   margin-bottom: 16px;
 }
 
-.result-form .ant-form-item-label {
-  padding-bottom: 4px;
-}
-
 .result-form .ant-form-item-label > label {
   font-size: 14px;
   font-weight: 500;
   color: #595959;
+}
+
+/* AI 추출 사이즈 표시 */
+.sizes-detected {
+  background: #f0f5ff;
+  border: 1px solid #adc6ff;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.sizes-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1890ff;
+  margin-bottom: 8px;
+}
+
+.size-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.size-tag {
+  display: inline-block;
+  padding: 6px 12px;
+  background: #1890ff;
+  color: white;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 /* 수량 카드 */
@@ -161,52 +189,117 @@
 .item-code {
   font-size: 14px;
   color: #8c8c8c;
-  margin: 0;
+  margin: 0 0 8px 0;
 }
 
-/* 사이즈별 수량 */
+/* 동적 사이즈별 수량 입력 */
 .size-quantity-section h4 {
   font-size: 16px;
   font-weight: 600;
   color: #262626;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.quantity-hint {
+  font-size: 13px;
+  color: #8c8c8c;
+  text-align: center;
   margin-bottom: 16px;
 }
 
-.size-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+.dynamic-size-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.size-quantity-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 12px 16px;
+  transition: all 0.3s ease;
+}
+
+.size-quantity-item:hover {
+  background: #f5f5f5;
+  border-color: #d9d9d9;
+}
+
+.size-label {
+  font-size: 18px;
+  font-weight: 700;
+  color: #262626;
+  min-width: 60px;
+  padding: 8px 16px;
+  background: white;
+  border: 2px solid #1890ff;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.quantity-controls {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
-.size-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-
-.size-badge {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  color: white;
+.qty-btn {
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.qty-btn:active {
+  transform: scale(0.95);
+}
+
+.minus-btn {
+  border: 2px solid #d9d9d9;
+}
+
+.plus-btn {
   box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
 }
 
-.quantity-input {
-  width: 100%;
+.qty-input {
+  width: 80px;
+  height: 48px;
+  border-radius: 8px;
+  border: 2px solid #e8e8e8;
 }
 
-.quantity-input .ant-input-number-input {
+.qty-input .ant-input-number-input {
   text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: #262626;
+  height: 44px;
+}
+
+.total-quantity {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f0f0f0;
+  border-radius: 8px;
+  padding: 16px 20px;
   font-size: 16px;
   font-weight: 600;
+}
+
+.total-number {
+  font-size: 24px;
+  font-weight: 700;
 }
 
 /* 단순 수량 입력 */
@@ -214,21 +307,35 @@
   font-size: 16px;
   font-weight: 600;
   color: #262626;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
   text-align: center;
 }
 
-.large-quantity-input .ant-input-number-input {
-  text-align: center;
-  font-size: 32px !important;
+.simple-quantity-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 40px 0;
+}
+
+.simple-qty-btn {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.simple-qty-btn:active {
+  transform: scale(0.95);
+}
+
+.simple-qty-display {
+  font-size: 72px;
   font-weight: 700;
-  color: #1890ff;
+  min-width: 120px;
+  text-align: center;
 }
 
 /* 제출 버튼 */
 .submit-btn {
-  background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
-  border: none;
   height: 56px;
   font-size: 18px;
   font-weight: 600;
@@ -236,21 +343,39 @@
 }
 
 .submit-btn:hover {
-  background: linear-gradient(135deg, #73d13d 0%, #52c41a 100%);
   box-shadow: 0 6px 16px rgba(82, 196, 26, 0.4);
 }
 
 /* 반응형 */
 @media (max-width: 576px) {
-  .size-grid {
-    grid-template-columns: repeat(4, 1fr);
+  .size-label {
+    font-size: 16px;
+    min-width: 50px;
+    padding: 6px 12px;
+  }
+  
+  .qty-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+  
+  .qty-input {
+    width: 70px;
+    height: 44px;
+  }
+  
+  .qty-input .ant-input-number-input {
+    font-size: 18px;
+  }
+  
+  .quantity-controls {
     gap: 8px;
   }
   
-  .size-badge {
-    width: 48px;
-    height: 48px;
-    font-size: 14px;
+  .simple-qty-display {
+    font-size: 56px;
+    min-width: 100px;
   }
   
   .top-actions {
@@ -266,12 +391,24 @@
 
 /* 터치 최적화 */
 @media (hover: none) and (pointer: coarse) {
-  .ant-btn {
-    min-height: 44px;
+  .qty-btn {
+    min-width: 48px;
+    min-height: 48px;
   }
   
-  .ant-input,
-  .ant-input-number {
-    min-height: 44px;
+  .size-quantity-item {
+    padding: 16px;
+  }
+}
+
+/* 애니메이션 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

@@ -1,5 +1,5 @@
 /**
- * 입고 탭 컴포넌트
+ * 입고 탭 컴포넌트 (동적 사이즈 추출 방식)
  */
 import { useState, useRef } from 'react';
 import { 
@@ -13,9 +13,6 @@ import {
   message,
   Divider,
   Badge,
-  Tag,
-  Row,
-  Col,
   Modal
 } from 'antd';
 import {
@@ -25,14 +22,16 @@ import {
   CheckCircleOutlined,
   DownloadOutlined,
   UploadOutlined,
-  ScanOutlined
+  ScanOutlined,
+  PlusOutlined,
+  MinusOutlined
 } from '@ant-design/icons';
 import Webcam from 'react-webcam';
 import { triggerFeedback } from '../../utils/feedback';
 import { analyzeImageWithGemini } from '../../services/geminiService';
 import './InboundTab.css';
 
-const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
+const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = 'inbound' }) => {
   const [step, setStep] = useState(1); // 1: 스캔, 2: AI 결과, 3: 수량 입력
   const [cameraActive, setCameraActive] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
@@ -40,6 +39,7 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
   const [aiResult, setAiResult] = useState(null);
   const [form] = Form.useForm();
   const [sizeQuantities, setSizeQuantities] = useState({});
+  const [simpleQuantity, setSimpleQuantity] = useState(0);
   const [barcodeModalVisible, setBarcodeModalVisible] = useState(false);
   const [barcode, setBarcode] = useState('');
   const webcamRef = useRef(null);
@@ -58,7 +58,6 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
     setCapturedImage(imageSrc);
     setCameraActive(false);
     
-    // 자동으로 AI 분석 시작
     fetch(imageSrc)
       .then(res => res.blob())
       .then(blob => {
@@ -70,17 +69,29 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
   // 이미지 분석
   const handleImageAnalysis = async (file) => {
     setAnalyzing(true);
-    message.loading({ content: 'AI 분석 중...', key: 'analyzing', duration: 0 });
+    message.loading({ content: 'AI가 사진을 분석하고 있습니다...', key: 'analyzing', duration: 0 });
 
     try {
       const result = await analyzeImageWithGemini(file);
       setAiResult(result);
       form.setFieldsValue(result);
+      
+      // 사이즈별 수량 초기화
+      if (result.sizes && result.sizes.length > 0) {
+        const initialQuantities = {};
+        result.sizes.forEach(size => {
+          initialQuantities[size] = 0;
+        });
+        setSizeQuantities(initialQuantities);
+      } else {
+        setSimpleQuantity(0);
+      }
+      
       setStep(2);
-      message.success({ content: 'AI 분석 완료', key: 'analyzing' });
+      message.success({ content: '✅ AI 분석 완료!', key: 'analyzing' });
       triggerFeedback('success');
     } catch (error) {
-      message.error({ content: '분석 실패', key: 'analyzing' });
+      message.error({ content: '❌ 분석 실패', key: 'analyzing' });
       triggerFeedback('error');
     } finally {
       setAnalyzing(false);
@@ -103,7 +114,7 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
   const handleConfirm = async () => {
     try {
       const values = await form.validateFields();
-      setAiResult(values);
+      setAiResult({ ...aiResult, ...values });
       setStep(3);
       triggerFeedback('success');
     } catch (error) {
@@ -111,15 +122,45 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
     }
   };
 
-  // 사이즈별 수량 변경
-  const handleSizeQuantityChange = (size, value) => {
+  // 사이즈별 수량 증가
+  const handleSizeIncrease = (size) => {
+    triggerFeedback('click');
     setSizeQuantities(prev => ({
       ...prev,
-      [size]: value || 0
+      [size]: (prev[size] || 0) + 1
     }));
   };
 
-  // 입고 처리
+  // 사이즈별 수량 감소
+  const handleSizeDecrease = (size) => {
+    triggerFeedback('click');
+    setSizeQuantities(prev => ({
+      ...prev,
+      [size]: Math.max(0, (prev[size] || 0) - 1)
+    }));
+  };
+
+  // 사이즈별 수량 직접 입력
+  const handleSizeQuantityChange = (size, value) => {
+    setSizeQuantities(prev => ({
+      ...prev,
+      [size]: Math.max(0, value || 0)
+    }));
+  };
+
+  // 단순 수량 증가
+  const handleSimpleIncrease = () => {
+    triggerFeedback('click');
+    setSimpleQuantity(prev => prev + 1);
+  };
+
+  // 단순 수량 감소
+  const handleSimpleDecrease = () => {
+    triggerFeedback('click');
+    setSimpleQuantity(prev => Math.max(0, prev - 1));
+  };
+
+  // 입고/출고 처리
   const handleSubmit = () => {
     const hasSizes = aiResult?.sizes && aiResult.sizes.length > 0;
     
@@ -127,7 +168,7 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
     if (hasSizes) {
       totalQuantity = Object.values(sizeQuantities).reduce((sum, qty) => sum + qty, 0);
     } else {
-      totalQuantity = form.getFieldValue('quantity') || 0;
+      totalQuantity = simpleQuantity;
     }
 
     if (totalQuantity === 0) {
@@ -137,23 +178,32 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
     }
 
     Modal.confirm({
-      title: '입고 처리 확인',
+      title: mode === 'inbound' ? '입고 처리 확인' : '출고 처리 확인',
       content: (
-        <div>
-          <p><strong>품번:</strong> {aiResult.itemCode}</p>
-          <p><strong>상품명:</strong> {aiResult.itemName}</p>
-          <p><strong>총 수량:</strong> {totalQuantity}개</p>
+        <div style={{ padding: '12px 0' }}>
+          <p style={{ marginBottom: 8 }}><strong>품번:</strong> {aiResult.itemCode}</p>
+          <p style={{ marginBottom: 8 }}><strong>상품명:</strong> {aiResult.itemName}</p>
+          {hasSizes ? (
+            <div>
+              <p style={{ marginBottom: 8 }}><strong>사이즈별 수량:</strong></p>
+              <ul style={{ paddingLeft: 20, marginBottom: 8 }}>
+                {Object.entries(sizeQuantities).map(([size, qty]) => (
+                  qty > 0 && <li key={size}>{size}: {qty}개</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p style={{ marginBottom: 8 }}><strong>수량:</strong> {totalQuantity}개</p>
+          )}
+          <p style={{ marginBottom: 0 }}><strong>총 수량:</strong> {totalQuantity}개</p>
         </div>
       ),
+      okText: '확인',
+      cancelText: '취소',
       onOk: () => {
-        message.success('입고 처리 완료');
+        message.success(`✅ ${mode === 'inbound' ? '입고' : '출고'} 처리 완료`);
         triggerFeedback('success');
-        // 초기화
-        setStep(1);
-        setCapturedImage(null);
-        setAiResult(null);
-        setSizeQuantities({});
-        form.resetFields();
+        handleRescan();
       }
     });
   };
@@ -165,10 +215,11 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
     setCapturedImage(null);
     setAiResult(null);
     setSizeQuantities({});
+    setSimpleQuantity(0);
     form.resetFields();
   };
 
-  // 바코드 스캔
+  // 바코드 검색
   const handleBarcodeSearch = () => {
     if (!barcode.trim()) {
       message.warning('바코드를 입력하세요');
@@ -178,6 +229,9 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
     setBarcodeModalVisible(false);
     setBarcode('');
   };
+
+  const modeText = mode === 'inbound' ? '입고' : '출고';
+  const modeColor = mode === 'inbound' ? '#52c41a' : '#ff4d4f';
 
   return (
     <div className="inbound-tab">
@@ -298,7 +352,11 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
             <h3>AI 발품 결과</h3>
             <Badge 
               count={`신뢰도 ${Math.round(aiResult.confidence * 100)}%`} 
-              style={{ backgroundColor: aiResult.confidence >= 0.9 ? '#52c41a' : '#faad14' }}
+              style={{ 
+                backgroundColor: aiResult.confidence >= 0.9 ? '#52c41a' : '#faad14',
+                fontSize: 12,
+                fontWeight: 600
+              }}
             />
           </div>
 
@@ -311,25 +369,25 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
               <Input size="large" placeholder="상품명 입력" />
             </Form.Item>
 
-            <Form.Item label="공급가" name="currentStock">
+            <Form.Item label="공급가" name="price">
               <InputNumber 
                 size="large" 
                 style={{ width: '100%' }}
                 formatter={value => `₩ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
                 parser={value => value.replace(/₩\s?|(,*)/g, '')}
+                placeholder="가격 입력"
               />
             </Form.Item>
 
             {aiResult.sizes && aiResult.sizes.length > 0 && (
-              <Form.Item label="사이즈">
-                <Space wrap>
+              <div className="sizes-detected">
+                <p className="sizes-label">🎯 AI가 추출한 사이즈</p>
+                <div className="size-tags">
                   {aiResult.sizes.map(size => (
-                    <Tag key={size} color="blue" style={{ fontSize: 14, padding: '4px 12px' }}>
-                      {size}
-                    </Tag>
+                    <span key={size} className="size-tag">{size}</span>
                   ))}
-                </Space>
-              </Form.Item>
+                </div>
+              </div>
             )}
 
             <Form.Item label="바코드" name="barcode">
@@ -362,47 +420,108 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
         </Card>
       )}
 
-      {/* Step 3: 수량 입력 */}
+      {/* Step 3: 동적 수량 입력 */}
       {step === 3 && aiResult && (
         <Card className="quantity-card">
           <div className="product-info">
             <h3>{aiResult.itemName}</h3>
             <p className="item-code">품번: {aiResult.itemCode}</p>
+            <Badge 
+              count={modeText}
+              style={{ 
+                backgroundColor: modeColor,
+                fontSize: 14,
+                fontWeight: 600,
+                marginTop: 8
+              }}
+            />
           </div>
 
           <Divider />
 
           {aiResult.sizes && aiResult.sizes.length > 0 ? (
-            // 사이즈별 수량 입력
+            // 사이즈별 수량 입력 (동적 생성)
             <div className="size-quantity-section">
               <h4>사이즈 / 수량</h4>
-              <div className="size-grid">
+              <p className="quantity-hint">엄지로 톡톡 눌러서 수량을 맞춰주세요</p>
+              
+              <div className="dynamic-size-list">
                 {aiResult.sizes.map(size => (
-                  <div key={size} className="size-item">
-                    <div className="size-badge">{size}</div>
-                    <InputNumber
-                      min={0}
-                      value={sizeQuantities[size] || 0}
-                      onChange={(value) => handleSizeQuantityChange(size, value)}
-                      size="large"
-                      className="quantity-input"
-                    />
+                  <div key={size} className="size-quantity-item">
+                    <div className="size-label">{size}</div>
+                    <div className="quantity-controls">
+                      <Button
+                        type="default"
+                        shape="circle"
+                        icon={<MinusOutlined />}
+                        size="large"
+                        onClick={() => handleSizeDecrease(size)}
+                        disabled={sizeQuantities[size] === 0}
+                        className="qty-btn minus-btn"
+                      />
+                      <InputNumber
+                        value={sizeQuantities[size] || 0}
+                        onChange={(value) => handleSizeQuantityChange(size, value)}
+                        min={0}
+                        size="large"
+                        className="qty-input"
+                        controls={false}
+                      />
+                      <Button
+                        type="primary"
+                        shape="circle"
+                        icon={<PlusOutlined />}
+                        size="large"
+                        onClick={() => handleSizeIncrease(size)}
+                        className="qty-btn plus-btn"
+                        style={{ backgroundColor: modeColor, borderColor: modeColor }}
+                      />
+                    </div>
                   </div>
                 ))}
+              </div>
+              
+              <div className="total-quantity">
+                <span>총 수량:</span>
+                <span className="total-number" style={{ color: modeColor }}>
+                  {Object.values(sizeQuantities).reduce((sum, qty) => sum + qty, 0)}개
+                </span>
               </div>
             </div>
           ) : (
             // 단순 수량 입력
             <div className="simple-quantity-section">
               <h4>동록 수량</h4>
-              <Form.Item name="quantity" initialValue={24}>
-                <InputNumber
-                  min={0}
+              <div className="simple-quantity-controls">
+                <Button
+                  type="default"
+                  shape="circle"
+                  icon={<MinusOutlined />}
                   size="large"
-                  style={{ width: '100%', fontSize: 32, height: 80 }}
-                  className="large-quantity-input"
+                  onClick={handleSimpleDecrease}
+                  disabled={simpleQuantity === 0}
+                  className="simple-qty-btn"
+                  style={{ width: 64, height: 64, fontSize: 24 }}
                 />
-              </Form.Item>
+                <div className="simple-qty-display" style={{ color: modeColor }}>
+                  {simpleQuantity}
+                </div>
+                <Button
+                  type="primary"
+                  shape="circle"
+                  icon={<PlusOutlined />}
+                  size="large"
+                  onClick={handleSimpleIncrease}
+                  className="simple-qty-btn"
+                  style={{ 
+                    width: 64, 
+                    height: 64, 
+                    fontSize: 24,
+                    backgroundColor: modeColor,
+                    borderColor: modeColor
+                  }}
+                />
+              </div>
             </div>
           )}
 
@@ -415,6 +534,7 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate }) => {
               block
               onClick={handleSubmit}
               className="submit-btn"
+              style={{ backgroundColor: modeColor, borderColor: modeColor }}
             >
               소장
             </Button>
