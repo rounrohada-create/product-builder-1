@@ -69,12 +69,31 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = '
   // 이미지 분석
   const handleImageAnalysis = async (file) => {
     setAnalyzing(true);
-    message.loading({ content: 'AI가 사진을 분석하고 있습니다...', key: 'analyzing', duration: 0 });
+    message.loading({ content: 'AI가 사진을 정밀 분석하고 있습니다...', key: 'analyzing', duration: 0 });
 
     try {
       const result = await analyzeImageWithGemini(file);
+      
+      // 재촬영 필요 체크
+      if (result.needRescan || result.confidence < 0.6) {
+        message.warning({ 
+          content: result.message || '사진이 흐릿합니다. 조명을 밝게 하고 다시 촬영해 주세요.', 
+          key: 'analyzing',
+          duration: 5
+        });
+        triggerFeedback('error');
+        setCapturedImage(null);
+        return;
+      }
+      
       setAiResult(result);
-      form.setFieldsValue(result);
+      form.setFieldsValue({
+        brand: result.brand,
+        itemCode: result.itemCode,
+        itemName: result.itemName,
+        price: result.price,
+        barcode: result.barcode
+      });
       
       // 사이즈별 수량 초기화
       if (result.sizes && result.sizes.length > 0) {
@@ -88,11 +107,17 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = '
       }
       
       setStep(2);
-      message.success({ content: '✅ AI 분석 완료!', key: 'analyzing' });
+      message.success({ 
+        content: `✅ AI 분석 완료! (신뢰도: ${Math.round(result.confidence * 100)}%)`, 
+        key: 'analyzing',
+        duration: 2
+      });
       triggerFeedback('success');
     } catch (error) {
-      message.error({ content: '❌ 분석 실패', key: 'analyzing' });
+      console.error('분석 오류:', error);
+      message.error({ content: '❌ 분석 실패. 다시 시도해주세요.', key: 'analyzing' });
       triggerFeedback('error');
+      setCapturedImage(null);
     } finally {
       setAnalyzing(false);
     }
@@ -361,6 +386,12 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = '
           </div>
 
           <Form form={form} layout="vertical" className="result-form">
+            {aiResult.brand && (
+              <Form.Item label="브랜드" name="brand">
+                <Input size="large" placeholder="브랜드 입력" />
+              </Form.Item>
+            )}
+
             <Form.Item label="품번" name="itemCode" rules={[{ required: true }]}>
               <Input size="large" placeholder="품번 입력" />
             </Form.Item>
@@ -381,7 +412,7 @@ const InboundTab = ({ inventoryData, onUploadExcel, onDownloadTemplate, mode = '
 
             {aiResult.sizes && aiResult.sizes.length > 0 && (
               <div className="sizes-detected">
-                <p className="sizes-label">🎯 AI가 추출한 사이즈</p>
+                <p className="sizes-label">🎯 AI가 추출한 사이즈 ({aiResult.sizes.length}개)</p>
                 <div className="size-tags">
                   {aiResult.sizes.map(size => (
                     <span key={size} className="size-tag">{size}</span>
