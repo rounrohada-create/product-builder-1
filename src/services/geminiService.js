@@ -5,7 +5,8 @@
 
 // Gemini API 설정
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+// gemini-2.5-flash: 최신 모델, 빠르고 정확한 이미지 분석
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 /**
  * 이미지를 Base64로 변환
@@ -191,7 +192,7 @@ export const analyzeImageWithGemini = async (imageFile) => {
         temperature: 0.4,
         topK: 32,
         topP: 1,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 4096,
       }
     };
 
