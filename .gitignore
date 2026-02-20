@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Environment variables (IMPORTANT: Never commit API keys!)
+.env
+.env.local
+.env*.local
+
+# Test files with hardcoded API keys
+test-*.js
+list-*.js
+test-*.jpg
+test-*.txt
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

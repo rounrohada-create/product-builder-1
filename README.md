@@ -43,11 +43,32 @@ npm install
 ```
 
 ### 2. 환경 변수 설정
+
+**⚠️ 중요: API 키 보안 관리**
+
 `.env.example` 파일을 복사하여 `.env` 파일을 생성하고 Gemini API 키를 입력합니다.
 
 ```bash
 cp .env.example .env
 ```
+
+#### Gemini API 키 발급 방법
+
+1. **Google AI Studio 접속**: https://makersuite.google.com/app/apikey
+2. **"Create API Key" 클릭**
+3. **프로젝트 선택** 또는 새 프로젝트 생성
+4. **발급된 API 키 복사**
+5. `.env` 파일에 붙여넣기:
+
+```env
+VITE_GEMINI_API_KEY=AIza...your_api_key_here
+```
+
+**🔒 보안 주의사항:**
+- ❌ `.env` 파일을 절대 Git에 커밋하지 마세요
+- ❌ API 키를 코드에 하드코딩하지 마세요
+- ✅ API 키 사용 제한을 설정하세요 (IP, API, 할당량)
+- ✅ 정기적으로 키를 교체하세요
 
 `.env` 파일을 열어 API 키를 입력:
 ```
